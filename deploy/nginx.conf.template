@@ -1,0 +1,34 @@
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 50m;
+
+    # API_UPSTREAM la reemplaza la imagen de nginx al iniciar (envsubst).
+    # Ej: http://host.docker.internal:8081 o https://api.tu-dominio.com
+    location /api/ {
+        proxy_pass ${API_UPSTREAM};
+        proxy_ssl_server_name on;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Archivos con hash: caché larga
+    location /_expo/ {
+        expires 1y;
+        try_files $uri =404;
+    }
+    location /assets/ {
+        expires 30d;
+        try_files $uri =404;
+    }
+
+    # SPA: cualquier ruta cae en index.html
+    location / {
+        try_files $uri $uri.html $uri/ /index.html;
+        expires -1;
+    }
+}
