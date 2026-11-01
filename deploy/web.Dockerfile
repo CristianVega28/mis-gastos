@@ -2,7 +2,7 @@
 # Uso: deploy/build-web.sh  (o: docker build -f deploy/web.Dockerfile --target export --output type=local,dest=/var/www/mis-gastos .)
 FROM node:22-slim AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 COPY . .
 # Misma URL que la web: Caddy reenvía /api a la API
