@@ -1,0 +1,61 @@
+# Caddy sirve la web de Mis Gastos y reenvía /api a la API (HTTPS automático).
+#
+#   /api/*  → mis-gastos-api (contenedor Go, API_PORT del VPS, por defecto 8081)
+#   resto   → archivos del build de Expo en /var/www/mis-gastos (deploy/build-web.sh)
+#
+# La web se compila con EXPO_PUBLIC_API_URL=/api, así que llama a /api en este
+# mismo dominio. La app nativa usa EXPO_PUBLIC_API_URL=https://cristianvega.app/api.
+#
+# Si Caddy corre en Docker (no instalado en el VPS): cambia "localhost" por
+# "host.docker.internal", añade extra_hosts: ["host.docker.internal:host-gateway"]
+# al servicio de Caddy y monta /var/www/mis-gastos en el contenedor.
+
+{
+	email buho@buho.cloud
+}
+
+cristianvega.app {
+	encode zstd gzip
+
+	# Restaurar respaldo envía todo el JSON de la cuenta
+	request_body {
+		max_size 50MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API: handle (no handle_path) porque la API espera el prefijo /api
+	handle /api/* {
+		reverse_proxy localhost:8081 {
+			health_uri /api/health
+			health_interval 30s
+		}
+	}
+
+	# Web (SPA)
+	handle {
+		root * /var/www/mis-gastos
+
+		# Archivos con hash en el nombre: caché larga
+		@hashed path /_expo/*
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=2592000"
+		# index.html y el resto: siempre revalidar para ver cada deploy nuevo
+		@html not path /_expo/* /assets/*
+		header @html Cache-Control "no-cache"
+
+		# Rutas que no existen como archivo (/ajustes, /gasto…) caen en index.html
+		try_files {path} {path}.html {path}/ /index.html
+		file_server
+	}
+}
+
+www.cristianvega.app {
+	redir https://cristianvega.app{uri} permanent
+}

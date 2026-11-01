@@ -6,7 +6,7 @@ import { useAuth } from '@/store/auth';
 /**
  * URL de la API:
  * - EXPO_PUBLIC_API_URL si está definida (builds de la app nativa).
- * - Web en producción: el mismo dominio (`/api`), que nginx reenvía al backend.
+ * - Web en producción: el mismo dominio (`/api`), que Caddy reenvía al backend.
  * - Desarrollo: el mismo host que el servidor de Expo, puerto 8080.
  */
 function resolveBaseUrl() {

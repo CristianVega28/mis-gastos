@@ -63,8 +63,7 @@ src/
     api.ts             Cliente HTTP y URL de la API
     storage*.ts        Almacenamiento local por plataforma
   store/               Zustand (sesión, ajustes y mes seleccionado)
-deploy/                nginx y Dockerfile de la web
-docker-compose.yml     web (nginx) para el VPS
+deploy/                Caddyfile, Dockerfile y script para compilar la web
 ```
 
 ## Desarrollo
@@ -94,19 +93,24 @@ npx expo run:ios          # o run:android (requiere Xcode / Android Studio)
 npx eas-cli@latest build --profile development
 ```
 
-## Producción (VPS con Docker)
+## Producción (VPS con Caddy)
+
+La web son archivos estáticos: se compilan y **Caddy** los sirve, con HTTPS, y reenvía `/api` a la API (`mis-gastos-api`, en el puerto 8081 del VPS). Web y API comparten dominio.
 
 ```bash
-cp .env.example .env      # define API_UPSTREAM (dónde está la API) y WEB_PORT
-docker compose up -d --build
+deploy/build-web.sh                         # compila con Docker y publica en /var/www/mis-gastos
+sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
+sudo systemctl reload caddy
 ```
 
-Levanta solo `web`: un nginx que sirve la app y reenvía `/api` a `API_UPSTREAM`, así que la web y la API comparten dominio. La API se despliega por su cuenta (ver `mis-gastos-api`); si está en la misma máquina, el valor por defecto `http://host.docker.internal:8081` ya funciona. Pon tu proxy con HTTPS delante del puerto `WEB_PORT`.
+Sin Docker: `npm ci && npm run build:web` crea `dist/`; cópialo a `/var/www/mis-gastos` (por ejemplo, `rsync -a --delete dist/ usuario@vps:/var/www/mis-gastos/`). No definas `EXPO_PUBLIC_API_URL` al compilar la web: en producción ya usa `/api`.
+
+El Caddyfile hace tres cosas imprescindibles: `reverse_proxy` de `/api/*` (con `handle`, no `handle_path`, porque la API espera el prefijo `/api`), `try_files … /index.html` para que recargar una ruta como `/ajustes` no dé 404, y `file_server`. Para actualizar la web basta con volver a compilar; Caddy no se reinicia.
 
 Para la **app nativa** de producción, compílala apuntando a la API:
 
 ```bash
-EXPO_PUBLIC_API_URL=https://api.tu-dominio.com/api npx eas-cli@latest build --profile production
+EXPO_PUBLIC_API_URL=https://cristianvega.app/api npx eas-cli@latest build --profile production
 ```
 
 (o define esa variable en el perfil de `eas.json`).

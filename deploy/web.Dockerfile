@@ -1,16 +1,14 @@
-# Compila la app web de Expo y la sirve con nginx, que además reenvía /api a la API (API_UPSTREAM).
+# Compila la web de Expo y deja solo el dist, que sirve Caddy (deploy/Caddyfile).
+# Uso: deploy/build-web.sh  (o: docker build -f deploy/web.Dockerfile --target export --output type=local,dest=/var/www/mis-gastos .)
 FROM node:22-slim AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
-# Misma URL que la web: nginx reenvía /api a la API
+# Misma URL que la web: Caddy reenvía /api a la API
 ENV EXPO_PUBLIC_API_URL=/api
 RUN npx expo export -p web
 
-FROM nginx:1.27-alpine
-# Las plantillas de /etc/nginx/templates se procesan con envsubst al arrancar
-COPY deploy/nginx.conf.template /etc/nginx/templates/default.conf.template
-ENV NGINX_ENVSUBST_FILTER=^API_
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
+# scratch es una imagen vacía: aquí solo quedan los archivos del dist
+FROM scratch AS export
+COPY --from=build /app/dist /
