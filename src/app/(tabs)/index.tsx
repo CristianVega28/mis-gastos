@@ -42,6 +42,8 @@ import { useIsDesktop } from '@/lib/layout';
 import { halfLabel, summarizeByHalf } from '@/lib/schedule';
 import { useThemeColors } from '@/lib/theme';
 import { useUI } from '@/store/ui';
+import { AccountsCarouselSkeleton, CategoryChartSkeleton, HeroSkeleton, StatPairSkeleton } from '@/components/skeletons';
+import { Skeleton, SkeletonPulse, SkeletonRowsCard } from '@/components/ui/skeleton';
 
 function greeting() {
   const h = new Date().getHours();
@@ -56,11 +58,11 @@ export default function HomeScreen() {
   const colors = useThemeColors();
   const isDesktop = useIsDesktop();
 
-  const { data: expenses } = useMonthExpenses(month);
-  const { data: totals } = useMonthlyTotals(month, 6);
+  const { data: expenses, loading: expensesLoading } = useMonthExpenses(month);
+  const { data: totals, loading: totalsLoading } = useMonthlyTotals(month, 6);
   const { data: byCategory } = useCategoryBreakdown(month);
   const { data: byPerson } = usePeopleMonthSummary(month);
-  const { data: balances } = usePeopleBalances();
+  const { data: balances, loading: balancesLoading } = usePeopleBalances();
   const { data: accounts, loading: accountsLoading } = useAccounts(month);
   const { data: schedule, loading: scheduleLoading } = useMonthSchedule(month);
 
@@ -85,7 +87,9 @@ export default function HomeScreen() {
       </Text>
     </View>
   );
-  const heroBlock = (
+  const heroBlock = expensesLoading ? (
+    <HeroSkeleton />
+  ) : (
     <>
       {/* Tarjeta principal */}
       <Animated.View entering={FadeInDown.duration(400)}>
@@ -126,7 +130,9 @@ export default function HomeScreen() {
       </Animated.View>
     </>
   );
-  const statsBlock = (
+  const statsBlock = balancesLoading ? (
+    <StatPairSkeleton className="mt-3" icon />
+  ) : (
     <>
       {/* Saldos */}
       <Animated.View
@@ -158,7 +164,9 @@ export default function HomeScreen() {
       </Animated.View>
     </>
   );
-  const accountsBlock = accountsLoading ? null : (
+  const accountsBlock = accountsLoading ? (
+    <AccountsCarouselSkeleton />
+  ) : (
     <>
       {/* Cuentas: de dónde sale cada gasto */}
       <SectionTitle
@@ -216,7 +224,12 @@ export default function HomeScreen() {
       )}
     </>
   );
-  const scheduleBlock = scheduleLoading ? null : (
+  const scheduleBlock = scheduleLoading ? (
+    <>
+      <SectionTitle title="Pagos del mes" />
+      <StatPairSkeleton />
+    </>
+  ) : (
     <>
       {/* Cronograma: lo que toca pagar en cada quincena */}
       <SectionTitle
@@ -258,8 +271,9 @@ export default function HomeScreen() {
       )}
     </>
   );
-  const categoryBlock =
-    expenses.length === 0 ? (
+  const categoryBlock = expensesLoading ? (
+    <CategoryChartSkeleton />
+  ) : expenses.length === 0 ? (
       <>
         <Card className="mt-6">
           <EmptyState
@@ -341,12 +355,29 @@ export default function HomeScreen() {
     <>
       {/* Tendencia */}
       <SectionTitle title="Últimos 6 meses" />
-      <Card>
-        <MonthBars data={totals} selected={month} format={(c) => money(c, { compact: true })} />
-      </Card>
+      {totalsLoading ? (
+        <SkeletonPulse>
+          <Card className="h-44 flex-row items-end justify-between gap-3 px-6">
+            {[45, 70, 55, 85, 60, 75].map((h, i) => (
+              <Skeleton key={i} className="flex-1 rounded-md" style={{ height: `${h}%` }} />
+            ))}
+          </Card>
+        </SkeletonPulse>
+      ) : (
+        <Card>
+          <MonthBars data={totals} selected={month} format={(c) => money(c, { compact: true })} />
+        </Card>
+      )}
     </>
   );
-  const recentBlock = (
+  const recentBlock = expensesLoading ? (
+    <>
+      <SectionTitle title="Recientes" />
+      <SkeletonPulse>
+        <SkeletonRowsCard count={3} />
+      </SkeletonPulse>
+    </>
+  ) : (
     <>
       {expenses.length > 0 && (
         <>

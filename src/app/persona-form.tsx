@@ -1,14 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Contact } from 'expo-contacts';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { BookUser, Check } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { ColorPicker } from '@/components/forms/color-picker';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Avatar } from '@/components/ui/avatar';
@@ -20,6 +21,7 @@ import { usePeople } from '@/db/queries';
 import { notify } from '@/lib/dialogs';
 import { haptic } from '@/lib/haptics';
 import { PALETTE } from '@/lib/palette';
+import { goBack } from '@/lib/navigation';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Escribe un nombre'),
@@ -33,7 +35,7 @@ export default function PersonFormScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = params.id ? Number(params.id) : undefined;
   const insets = useSafeAreaInsets();
-  const { data: people } = usePeople();
+  const { data: people, loading, error } = usePeople();
   const person = id ? people.find((p) => p.id === id) : undefined;
 
   const { control, handleSubmit, reset, setValue } = useForm<FormValues>({
@@ -41,8 +43,14 @@ export default function PersonFormScreen() {
     defaultValues: { name: '', phone: '', color: PALETTE[(people.length + 1) % PALETTE.length] },
   });
 
+  // Al editar, el skeleton se mantiene hasta que el formulario tiene los datos
+  const [hydrated, setHydrated] = useState(!id);
   useEffect(() => {
-    if (person) reset({ name: person.name, phone: person.phone ?? '', color: person.color });
+    if (!person) return;
+    reset({ name: person.name, phone: person.phone ?? '', color: person.color });
+    // Un render extra a propósito: el formulario se muestra recién cuando reset() ya lo llenó
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
   }, [person, reset]);
 
   const [name, color] = useWatch({ control, name: ['name', 'color'] });
@@ -65,8 +73,18 @@ export default function PersonFormScreen() {
   const onSubmit = handleSubmit(async (v) => {
     await savePerson({ name: v.name, color: v.color, phone: v.phone || null }, id);
     haptic.success();
-    router.back();
+    goBack();
   });
+
+  if (!hydrated)
+    return (
+      <FormPlaceholder
+        title="Editar persona"
+        error={error}
+        missing={!loading && !person}
+        notFound="Esta persona ya no existe"
+      />
+    );
 
   return (
     <ModalFrame>

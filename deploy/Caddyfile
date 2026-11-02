@@ -1,14 +1,14 @@
 # Caddy sirve la web de Mis Gastos y reenvía /api a la API (HTTPS automático).
 #
-#   /api/*  → mis-gastos-api (contenedor Go, API_PORT del VPS, por defecto 8081)
+#   /api/*  → contenedor mis-gastos-api:8080, por la red Docker externa "proxy"
 #   resto   → archivos del build de Expo en /var/www/mis-gastos (deploy/build-web.sh)
+#
+# El contenedor de Caddy necesita:
+#   networks:  [proxy]                                   (la misma red que la API)
+#   volumes:   - /var/www/mis-gastos:/var/www/mis-gastos:ro
 #
 # La web se compila con EXPO_PUBLIC_API_URL=/api, así que llama a /api en este
 # mismo dominio. La app nativa usa EXPO_PUBLIC_API_URL=https://cristianvega.app/api.
-#
-# Si Caddy corre en Docker (no instalado en el VPS): cambia "localhost" por
-# "host.docker.internal", añade extra_hosts: ["host.docker.internal:host-gateway"]
-# al servicio de Caddy y monta /var/www/mis-gastos en el contenedor.
 
 {
 	email buho@buho.cloud
@@ -29,9 +29,10 @@ cristianvega.app {
 		-Server
 	}
 
-	# API: handle (no handle_path) porque la API espera el prefijo /api
+	# API: handle (no handle_path) porque la API espera el prefijo /api.
+	# Puerto 8080 = el del contenedor (dentro de la red no se usa un puerto del VPS)
 	handle /api/* {
-		reverse_proxy localhost:8081 {
+		reverse_proxy mis-gastos-api:8080 {
 			health_uri /api/health
 			health_interval 30s
 		}

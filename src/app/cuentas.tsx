@@ -17,6 +17,8 @@ import { monthLabel } from '@/lib/dates';
 import { useMoney } from '@/lib/format';
 import { useThemeColors } from '@/lib/theme';
 import { useUI } from '@/store/ui';
+import { StatPairSkeleton } from '@/components/skeletons';
+import { SkeletonPulse, SkeletonRowsCard } from '@/components/ui/skeleton';
 
 export default function AccountsScreen() {
   const colors = useThemeColors();
@@ -38,7 +40,14 @@ export default function AccountsScreen() {
           }
         />
 
-        {!loading && accounts.length === 0 ? (
+        {loading ? (
+          <>
+            <StatPairSkeleton className="mt-2" />
+            <SkeletonPulse>
+              <SkeletonRowsCard className="mt-4" count={3} badge={40} />
+            </SkeletonPulse>
+          </>
+        ) : accounts.length === 0 ? (
           <Card className="mt-2">
             <EmptyState
               icon={Wallet}

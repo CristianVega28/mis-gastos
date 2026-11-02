@@ -23,6 +23,7 @@ import { haptic } from '@/lib/haptics';
 import { useIsDesktop } from '@/lib/layout';
 import { useThemeColors } from '@/lib/theme';
 import { useUI } from '@/store/ui';
+import { ExpenseListSkeleton } from '@/components/skeletons';
 
 type Item = { type: 'header'; date: string; total: number } | { type: 'expense'; expense: ExpenseWithRelations };
 
@@ -80,7 +81,7 @@ export default function ExpensesScreen() {
 
   const header = (
     <View className={isDesktop ? 'px-10' : 'px-5'} style={{ paddingTop: isDesktop ? 32 : insets.top + 8 }}>
-      <ScreenHeader title="Gastos" subtitle={`${filtered.length} movimientos · ${money(total)}`} />
+      <ScreenHeader title="Gastos" subtitle={loading ? 'Cargando…' : `${filtered.length} movimientos · ${money(total)}`} />
       <MonthSwitcher />
 
       <View className="mt-3 h-12 flex-row items-center gap-2 rounded-2xl border border-border bg-card px-4">
@@ -155,7 +156,9 @@ export default function ExpensesScreen() {
             )
           }
           ListEmptyComponent={
-            loading ? null : (
+            loading ? (
+              <ExpenseListSkeleton padded={isDesktop ? 'px-10' : 'px-5'} />
+            ) : (
               <EmptyState
                 icon={Receipt}
                 title={query || categoryId ? 'Sin resultados' : 'Aún no hay gastos'}

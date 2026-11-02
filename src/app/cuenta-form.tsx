@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccountBadge } from '@/components/account-badge';
 import { ColorPicker } from '@/components/forms/color-picker';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Button, IconButton } from '@/components/ui/button';
@@ -22,15 +23,24 @@ import { haptic } from '@/lib/haptics';
 import { centsToInput, parseAmount } from '@/lib/money';
 import { PALETTE } from '@/lib/palette';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function AccountFormScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = params.id ? Number(params.id) : undefined;
-  const { data: accounts, loading } = useAccounts();
+  const { data: accounts, loading, error } = useAccounts();
   const account = id ? accounts.find((a) => a.id === id) : undefined;
 
   // Al editar, espera a tener la cuenta para inicializar el formulario
-  if (id && (loading || !account)) return <View className="flex-1 bg-background" />;
+  if (id && (loading || !account))
+    return (
+      <FormPlaceholder
+        title="Editar cuenta"
+        error={error}
+        missing={!loading && !account}
+        notFound="Esta cuenta ya no existe"
+      />
+    );
   return (
     <ModalFrame>
       <AccountForm key={account?.id ?? 'new'} id={id} initial={account} />
@@ -59,7 +69,7 @@ function AccountForm({ id, initial }: { id?: number; initial?: AccountSummary })
     const initialBalanceCents = initial ? initial.initialBalanceCents + (balanceCents - initial.balance) : balanceCents;
     await saveAccount({ name, type, color, initialBalanceCents }, id);
     haptic.success();
-    router.back();
+    goBack();
   };
 
   const onDelete = () =>

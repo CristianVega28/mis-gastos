@@ -14,6 +14,7 @@ import { usePeopleBalances } from '@/db/queries';
 import { useMoney } from '@/lib/format';
 import { useIsDesktop } from '@/lib/layout';
 import { useThemeColors } from '@/lib/theme';
+import { CardListSkeleton } from '@/components/skeletons';
 
 export default function PeopleScreen() {
   const money = useMoney();
@@ -29,7 +30,7 @@ export default function PeopleScreen() {
       <Screen>
         <ScreenHeader
           title="Personas"
-          subtitle={totalOwed > 0 ? `Te deben ${money(totalOwed)} en total` : 'Todos al día'}
+          subtitle={loading ? 'Cargando…' : totalOwed > 0 ? `Te deben ${money(totalOwed)} en total` : 'Todos al día'}
           right={
             <IconButton
               icon={UserPlus}
@@ -38,6 +39,8 @@ export default function PeopleScreen() {
             />
           }
         />
+
+        {loading && <CardListSkeleton count={4} />}
 
         {!loading && others.length === 0 && (
           <Card>

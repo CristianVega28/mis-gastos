@@ -1,10 +1,11 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Check, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ColorPicker } from '@/components/forms/color-picker';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Button, IconButton } from '@/components/ui/button';
@@ -20,15 +21,24 @@ import { confirm } from '@/lib/dialogs';
 import { haptic } from '@/lib/haptics';
 import { PALETTE } from '@/lib/palette';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function CategoryFormScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = params.id ? Number(params.id) : undefined;
-  const { data: categories, loading } = useCategories();
+  const { data: categories, loading, error } = useCategories();
   const category = id ? categories.find((c) => c.id === id) : undefined;
 
   // Al editar, espera a tener la categoría para inicializar el formulario
-  if (id && (loading || !category)) return <View className="flex-1 bg-background" />;
+  if (id && (loading || !category))
+    return (
+      <FormPlaceholder
+        title="Editar categoría"
+        error={error}
+        missing={!loading && !category}
+        notFound="Esta categoría ya no existe"
+      />
+    );
   return (
     <ModalFrame>
       <CategoryForm key={category?.id ?? 'new'} id={id} initial={category} />
@@ -51,7 +61,7 @@ function CategoryForm({ id, initial }: { id?: number; initial?: Category }) {
     }
     await saveCategory({ name, icon, color }, id);
     haptic.success();
-    router.back();
+    goBack();
   };
 
   const onDelete = () =>
@@ -62,7 +72,7 @@ function CategoryForm({ id, initial }: { id?: number; initial?: Category }) {
       destructive: true,
       onConfirm: async () => {
         await deleteCategory(id!);
-        router.back();
+        goBack();
       },
     });
 

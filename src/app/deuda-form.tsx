@@ -1,13 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, UserPlus } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { z } from 'zod';
 
 import { DateField } from '@/components/forms/date-field';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Avatar } from '@/components/ui/avatar';
@@ -25,6 +26,7 @@ import { centsToInput, parseAmount } from '@/lib/money';
 import { cancelReminder, scheduleDebtReminder } from '@/lib/reminders';
 import { useThemeColors } from '@/lib/theme';
 import { useSettings } from '@/store/settings';
+import { goBack } from '@/lib/navigation';
 
 const schema = z.object({
   direction: z.enum(['owed_to_me', 'i_owe']),
@@ -50,7 +52,9 @@ export default function DebtFormScreen() {
   const { currency, remindersEnabled } = useSettings();
 
   const { data: people } = usePeople();
-  const { data: debt } = useDebt(id);
+  const { data: debt, loading: debtLoading, error: debtError } = useDebt(id);
+  // Al editar, el skeleton se mantiene hasta que el formulario tiene los datos
+  const [hydrated, setHydrated] = useState(!id);
   const others = people.filter((p) => !p.isMe);
 
   const { control, handleSubmit, reset } = useForm<FormInput, unknown, FormOutput>({
@@ -75,6 +79,9 @@ export default function DebtFormScreen() {
       date: debt.date,
       dueDate: debt.dueDate,
     });
+    // Un render extra a propósito: el formulario se muestra recién cuando reset() ya lo llenó
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
   }, [debt, reset]);
 
   const [direction, amount] = useWatch({ control, name: ['direction', 'amount'] });
@@ -108,8 +115,18 @@ export default function DebtFormScreen() {
     await setDebtNotification(debtId, notificationId);
 
     haptic.success();
-    router.back();
+    goBack();
   });
+
+  if (!hydrated)
+    return (
+      <FormPlaceholder
+        title="Editar deuda"
+        error={debtError}
+        missing={!debtLoading && !debt}
+        notFound="Esta deuda ya no existe"
+      />
+    );
 
   return (
     <ModalFrame>

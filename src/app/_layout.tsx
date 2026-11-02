@@ -20,6 +20,12 @@ import { useThemeColors } from '@/lib/theme';
 import { useAuth } from '@/store/auth';
 import { useSettings } from '@/store/settings';
 
+// Al abrir o recargar una URL de detalle o modal (/gasto, /persona/3…), carga las
+// pestañas debajo para que "Volver" y cerrar lleven a la app y no a una pantalla vacía.
+export const unstable_settings = {
+  anchor: '(tabs)',
+};
+
 SplashScreen.preventAutoHideAsync();
 configureNotifications();
 

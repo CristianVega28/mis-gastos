@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { DetailPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { BackHeader } from '@/components/back-header';
 import { Avatar } from '@/components/ui/avatar';
@@ -22,15 +23,16 @@ import { haptic } from '@/lib/haptics';
 import { parseAmount } from '@/lib/money';
 import { cancelReminder } from '@/lib/reminders';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function DebtDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const money = useMoney();
   const colors = useThemeColors();
-  const { data: debt } = useDebt(Number(id));
+  const { data: debt, error } = useDebt(Number(id));
   const [payment, setPayment] = useState('');
 
-  if (!debt) return <Screen>{null}</Screen>;
+  if (!debt) return <DetailPlaceholder error={error} notFound="Esta deuda ya no existe" />;
 
   const paid = debt.payments.reduce((s, p) => s + p.amountCents, 0);
   const remaining = Math.max(debt.amountCents - paid, 0);
@@ -76,7 +78,7 @@ export default function DebtDetailScreen() {
         await cancelReminder(debt.notificationId);
         await deleteDebt(debt.id);
         haptic.warning();
-        router.back();
+        goBack();
       },
     });
 

@@ -21,6 +21,7 @@ import { haptic } from '@/lib/haptics';
 import { halfLabel, itemAmount, itemStatus, summarizeByHalf, type ScheduleStatus } from '@/lib/schedule';
 import { useThemeColors } from '@/lib/theme';
 import { useUI } from '@/store/ui';
+import { Skeleton, SkeletonPulse, SkeletonRowsCard } from '@/components/ui/skeleton';
 
 export default function ScheduleScreen() {
   const money = useMoney();
@@ -43,7 +44,25 @@ export default function ScheduleScreen() {
           <MonthSwitcher />
         </View>
 
-        {!loading && items.length === 0 ? (
+        {loading ? (
+          <SkeletonPulse>
+            <Card className="mt-4 gap-3">
+              <Skeleton className="h-2.5 w-28" />
+              <Skeleton className="h-7 w-36" />
+              <Skeleton className="h-2 w-full rounded-full" />
+              <Skeleton className="h-2.5 w-40" />
+            </Card>
+            {[2, 2].map((rows, i) => (
+              <View key={i}>
+                <View className="mb-3 mt-6 flex-row items-center justify-between">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-16" />
+                </View>
+                <SkeletonRowsCard count={rows} badge={40} />
+              </View>
+            ))}
+          </SkeletonPulse>
+        ) : items.length === 0 ? (
           <Card className="mt-4">
             <EmptyState
               icon={CalendarClock}

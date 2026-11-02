@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Check, Plus, Repeat, Trash2, UserPlus } from 'lucide-react-native';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { AccountBadge } from '@/components/account-badge';
 import { DateField } from '@/components/forms/date-field';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Avatar } from '@/components/ui/avatar';
@@ -28,6 +29,8 @@ import { useMoney } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { centsToInput, parseAmount, splitEvenly } from '@/lib/money';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
+import { Skeleton, SkeletonBadge, SkeletonPulse } from '@/components/ui/skeleton';
 
 const schema = z
   .object({
@@ -61,8 +64,8 @@ export default function ExpenseFormScreen() {
   const colors = useThemeColors();
   const money = useMoney();
 
-  const { data: expense } = useExpense(id);
-  const { data: categories } = useCategories();
+  const { data: expense, loading: expenseLoading, error: expenseError } = useExpense(id);
+  const { data: categories, loading: categoriesLoading } = useCategories();
   const { data: people } = usePeople();
   const { data: accounts, loading: accountsLoading } = useAccounts();
 
@@ -82,6 +85,9 @@ export default function ExpenseFormScreen() {
     },
   });
 
+  // Al editar, el skeleton se mantiene hasta que el formulario tiene los datos
+  const [hydrated, setHydrated] = useState(!id);
+
   // Carga los datos al editar
   useEffect(() => {
     if (!expense) return;
@@ -100,6 +106,9 @@ export default function ExpenseFormScreen() {
       personIds: expense.splits.map((s) => s.personId),
       custom: Object.fromEntries(expense.splits.map((s) => [String(s.personId), centsToInput(s.amountCents)])),
     });
+    // Un render extra a propósito: el formulario se muestra recién cuando reset() ya lo llenó
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true);
   }, [expense, reset]);
 
   // En un gasto nuevo, por defecto le corresponde a "Yo"
@@ -167,7 +176,7 @@ export default function ExpenseFormScreen() {
       return; // mutate() ya avisó del error; el formulario queda abierto
     }
     haptic.success();
-    router.back();
+    goBack();
   });
 
   const onDelete = () =>
@@ -179,9 +188,19 @@ export default function ExpenseFormScreen() {
       onConfirm: async () => {
         await deleteExpense(id!);
         haptic.warning();
-        router.back();
+        goBack();
       },
     });
+
+  if (!hydrated)
+    return (
+      <FormPlaceholder
+        title="Editar gasto"
+        error={expenseError}
+        missing={!expenseLoading && !expense}
+        notFound="Este gasto ya no existe"
+      />
+    );
 
   return (
     <ModalFrame>
@@ -241,6 +260,16 @@ export default function ExpenseFormScreen() {
                 <Text weight="medium" className="text-sm text-muted">
                   Categoría
                 </Text>
+                {categoriesLoading && (
+                  <SkeletonPulse style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {Array.from({ length: 8 }, (_, i) => (
+                      <View key={i} className="w-[23%] items-center gap-1.5 rounded-2xl bg-card py-3">
+                        <SkeletonBadge size={36} />
+                        <Skeleton className="h-2.5 w-12" />
+                      </View>
+                    ))}
+                  </SkeletonPulse>
+                )}
                 <View className="flex-row flex-wrap gap-2">
                   {categories.map((c) => {
                     const selected = field.value === c.id;
@@ -289,7 +318,13 @@ export default function ExpenseFormScreen() {
                     </Text>
                   </Pressable>
                 </View>
-                {accounts.length === 0 ? (
+                {accountsLoading ? (
+                  <SkeletonPulse style={{ flexDirection: 'row', gap: 8 }}>
+                    {['w-32', 'w-28', 'w-24'].map((w) => (
+                      <Skeleton key={w} className={cn('h-12 rounded-2xl', w)} />
+                    ))}
+                  </SkeletonPulse>
+                ) : accounts.length === 0 ? (
                   <Pressable
                     onPress={() => router.push('/cuenta-form')}
                     className="rounded-2xl border border-dashed border-border bg-card px-4 py-3"

@@ -95,12 +95,12 @@ npx eas-cli@latest build --profile development
 
 ## Producción (VPS con Caddy)
 
-La web son archivos estáticos: se compilan y **Caddy** los sirve, con HTTPS, y reenvía `/api` a la API (`mis-gastos-api`, en el puerto 8081 del VPS). Web y API comparten dominio.
+La web son archivos estáticos: se compilan y **Caddy** los sirve, con HTTPS, y reenvía `/api` a la API. Web y API comparten dominio. Caddy corre en un contenedor unido a la red Docker `proxy`, donde la API se llama `mis-gastos-api:8080` (ver `mis-gastos-api`), y monta `/var/www/mis-gastos` en solo lectura.
 
 ```bash
 deploy/build-web.sh                         # compila con Docker y publica en /var/www/mis-gastos
-sudo cp deploy/Caddyfile /etc/caddy/Caddyfile
-sudo systemctl reload caddy
+# copia deploy/Caddyfile al Caddyfile que monta tu contenedor de Caddy y recárgalo:
+docker exec <contenedor_caddy> caddy reload --config /etc/caddy/Caddyfile
 ```
 
 Sin Docker: `npm ci && npm run build:web` crea `dist/`; cópialo a `/var/www/mis-gastos` (por ejemplo, `rsync -a --delete dist/ usuario@vps:/var/www/mis-gastos/`). No definas `EXPO_PUBLIC_API_URL` al compilar la web: en producción ya usa `/api`.

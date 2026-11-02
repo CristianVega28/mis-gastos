@@ -5,6 +5,7 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
 
+import { DetailPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { BackHeader } from '@/components/back-header';
 import { DebtCard } from '@/components/debt-card';
@@ -24,17 +25,18 @@ import { confirm, notify } from '@/lib/dialogs';
 import { useMoney } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
 
 export default function PersonDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const personId = Number(id);
   const money = useMoney();
   const colors = useThemeColors();
-  const { data } = usePersonDetail(personId);
+  const { data, error } = usePersonDetail(personId);
   const [tab, setTab] = useState<'splits' | 'debts'>('splits');
   const summaryRef = useRef<ComponentRef<typeof View>>(null);
 
-  if (!data) return <Screen>{null}</Screen>;
+  if (!data) return <DetailPlaceholder error={error} notFound="Esta persona ya no existe" />;
   const { person, splits, debts } = data;
 
   const pendingSplits = person.isMe ? 0 : splits.filter((s) => !s.paid).reduce((s, x) => s + x.amountCents, 0);
@@ -64,7 +66,7 @@ export default function PersonDetailScreen() {
       onConfirm: async () => {
         await deletePerson(person.id);
         haptic.warning();
-        router.back();
+        goBack();
       },
     });
 

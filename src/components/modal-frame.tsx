@@ -1,8 +1,8 @@
-import { router } from 'expo-router';
 import { createContext, useContext } from 'react';
 import { Pressable, View } from 'react-native';
 
 import { useIsDesktop } from '@/lib/layout';
+import { goBack } from '@/lib/navigation';
 
 const InModalContext = createContext(false);
 
@@ -23,7 +23,7 @@ export function ModalFrame({ children, size = 'md' }: { children: React.ReactNod
     <View className="flex-1 items-center justify-center p-6">
       <Pressable
         accessibilityLabel="Cerrar"
-        onPress={() => router.back()}
+        onPress={() => goBack()}
         className="absolute inset-0 bg-black/60"
         style={{ cursor: 'default' } as object}
       />

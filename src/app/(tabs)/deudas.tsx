@@ -16,6 +16,8 @@ import { Text } from '@/components/ui/text';
 import { useDebts } from '@/db/queries';
 import { useMoney } from '@/lib/format';
 import { useIsDesktop } from '@/lib/layout';
+import { CardListSkeleton } from '@/components/skeletons';
+import { Skeleton, SkeletonPulse } from '@/components/ui/skeleton';
 
 type Direction = 'owed_to_me' | 'i_owe';
 type Status = 'pending' | 'paid' | 'all';
@@ -61,13 +63,19 @@ export default function DebtsScreen() {
           <Text className="text-sm text-muted">
             {direction === 'owed_to_me' ? 'Total por cobrar' : 'Total por pagar'}
           </Text>
-          <Text
-            weight="extrabold"
-            tabular
-            className={direction === 'owed_to_me' ? 'text-4xl text-success' : 'text-4xl text-danger'}
-          >
-            {money(pendingTotal)}
-          </Text>
+          {loading ? (
+            <SkeletonPulse>
+              <Skeleton className="mt-1 h-9 w-44" />
+            </SkeletonPulse>
+          ) : (
+            <Text
+              weight="extrabold"
+              tabular
+              className={direction === 'owed_to_me' ? 'text-4xl text-success' : 'text-4xl text-danger'}
+            >
+              {money(pendingTotal)}
+            </Text>
+          )}
         </Card>
 
         <View className="mb-3 mt-5 flex-row gap-2">
@@ -76,7 +84,9 @@ export default function DebtsScreen() {
           <Chip label="Todas" selected={status === 'all'} onPress={() => setStatus('all')} />
         </View>
 
-        {!loading && list.length === 0 ? (
+        {loading ? (
+          <CardListSkeleton count={3} />
+        ) : list.length === 0 ? (
           <Card>
             <EmptyState
               icon={HandCoins}

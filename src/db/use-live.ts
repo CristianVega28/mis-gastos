@@ -30,6 +30,7 @@ function subscribeToFocus(onFocus: () => void) {
 export function useLive<T>(query: () => Promise<T>, deps: unknown[], initial: T) {
   const [data, setData] = useState<T>(initial);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
   const runQuery = useEffectEvent(() => query());
 
   useEffect(() => {
@@ -41,10 +42,13 @@ export function useLive<T>(query: () => Promise<T>, deps: unknown[], initial: T)
         .then((result) => {
           if (!active) return;
           setData(result);
+          setError(null);
           setLoading(false);
         })
         .catch((e) => {
-          if (active) setLoading(false);
+          if (!active) return;
+          setError(e instanceof Error ? e : new Error(String(e)));
+          setLoading(false);
           console.warn('[useLive]', e);
         });
     };
@@ -67,5 +71,5 @@ export function useLive<T>(query: () => Promise<T>, deps: unknown[], initial: T)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  return { data, loading };
+  return { data, loading, error };
 }

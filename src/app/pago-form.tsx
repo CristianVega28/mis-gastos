@@ -1,10 +1,11 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { Check, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AccountBadge } from '@/components/account-badge';
+import { FormPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { ModalHeader } from '@/components/modal-header';
 import { Button, IconButton } from '@/components/ui/button';
@@ -20,17 +21,26 @@ import { useMoney } from '@/lib/format';
 import { haptic } from '@/lib/haptics';
 import { centsToInput, parseAmount } from '@/lib/money';
 import { useThemeColors } from '@/lib/theme';
+import { goBack } from '@/lib/navigation';
 
 const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export default function ScheduledPaymentFormScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = params.id ? Number(params.id) : undefined;
-  const { data: payments, loading } = useScheduledPayments();
+  const { data: payments, loading, error } = useScheduledPayments();
   const payment = id ? payments.find((p) => p.id === id) : undefined;
 
   // Al editar, espera a tener el pago para inicializar el formulario
-  if (id && (loading || !payment)) return <View className="flex-1 bg-background" />;
+  if (id && (loading || !payment))
+    return (
+      <FormPlaceholder
+        title="Editar pago"
+        error={error}
+        missing={!loading && !payment}
+        notFound="Este pago ya no existe"
+      />
+    );
   return (
     <ModalFrame>
       <ScheduledPaymentForm key={payment?.id ?? 'new'} id={id} initial={payment} />
@@ -65,7 +75,7 @@ function ScheduledPaymentForm({ id, initial }: { id?: number; initial?: Schedule
     }
     await saveScheduledPayment({ title, amountCents, dayOfMonth: day, categoryId, accountId, note }, id);
     haptic.success();
-    router.back();
+    goBack();
   };
 
   const onDelete = () =>
@@ -77,7 +87,7 @@ function ScheduledPaymentForm({ id, initial }: { id?: number; initial?: Schedule
       onConfirm: async () => {
         await deleteScheduledPayment(id!);
         haptic.warning();
-        router.back();
+        goBack();
       },
     });
 

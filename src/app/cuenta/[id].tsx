@@ -5,6 +5,7 @@ import { Pressable, TextInput, View } from 'react-native';
 
 import { AccountBadge } from '@/components/account-badge';
 import { BackHeader } from '@/components/back-header';
+import { DetailPlaceholder } from '@/components/detail-placeholder';
 import { ModalFrame } from '@/components/modal-frame';
 import { Button, IconButton } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -62,11 +63,11 @@ export default function AccountDetailScreen() {
   const month = useUI((s) => s.month);
   const money = useMoney();
   const colors = useThemeColors();
-  const { data } = useAccountDetail(Number(id), month);
+  const { data, error } = useAccountDetail(Number(id), month);
   const [deposit, setDeposit] = useState('');
   const movements = useMemo(() => (data ? buildMovements(data) : []), [data]);
 
-  if (!data) return <Screen>{null}</Screen>;
+  if (!data) return <DetailPlaceholder error={error} notFound="Esta cuenta ya no existe" />;
   const { account } = data;
   const info = ACCOUNT_TYPES[account.type];
   const depositCents = parseAmount(deposit) ?? 0;
